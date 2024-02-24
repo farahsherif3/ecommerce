@@ -1,3 +1,4 @@
+import Stripe from "stripe";
 import cartModel from "../../../../DB/models/Cart.model.js";
 import CouponModel from "../../../../DB/models/Coupon.model.js";
 import OrderModel from "../../../../DB/models/Order.model.js";
@@ -5,6 +6,7 @@ import productModel from "../../../../DB/models/product.model.js";
 import createInvoice from '../../../utils/createInvoice.js'
 import sendEmail from "../../../utils/email.js";
 import { asyncHandler } from "../../../utils/errorHandler.js";
+import payment from "../../../utils/payment.js";
 
 
 export const createOrder=asyncHandler(
@@ -95,7 +97,38 @@ await sendEmail({to:req.user.email,subject:'invoice',attachments:{
     application:'application/pdf'
 }})
 
-
+if(order.paymentType=='card'){
+    let createcoupon
+    if(couponName){
+        createcoupon=await Stripe.coupons.create({
+            amount_off:coupon.amount,
+            duration:'once'
+        })
+    }
+    const session=await payment({
+        customer_email:req.user.email,
+        metadata:{
+            orderId:order._id
+        },
+        success_url:`${process.env.SUCCESS_URL}/${order._id}`,
+        cancel_url:`${process.env.CANCEL_URL}/${order._id}`,
+        line_items:order.products.map(element=>{
+            return{
+                price_data:{
+                    currency:'USD',
+                    product_data:{
+                       name:element.name
+                    },
+                unite_amount:element.unitPrice *100,
+                    },
+                    quantity:element.quantity
+            }
+            
+        }),
+        discounts:couponName?[{coupon:createcoupon.id}]:[]
+    })
+    return res.status(201).json({message:'done',order,session})
+}
 
 
 
