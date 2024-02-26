@@ -1,3 +1,4 @@
+
 import { Schema,model } from "mongoose";
 import { Types } from "mongoose";
 const UserSchema=new Schema({
@@ -40,7 +41,7 @@ const UserSchema=new Schema({
         default:'offline'
     },
     
-    picture:String,
+    image:Object,
     confirmEmail:{
         type:Boolean,
         default:false
@@ -49,16 +50,21 @@ const UserSchema=new Schema({
         type:Boolean,
         index: true,
         default: false
-      },
-      code:String,
-      wishList:[
-        {
-            type:Types.ObjectId,
-            ref:'Product'
-         
-        }
-      ]
+    },
+    code:String,
+     wishList:[
+       {
+      type:Types.ObjectId,
+      ref:'Product'
+        
+       }
+     ],
+     provider:{
+       type:String,
+       enum:["System","Google"],
+       default:"System"
+     }
     
-     },{timestamps:true})
-     const UserModel=model('User',UserSchema)
-     export default UserModel
+    },{timestamps:true})
+    const UserModel=model('User',UserSchema)
+    export default UserModel

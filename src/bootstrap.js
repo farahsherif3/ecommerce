@@ -7,7 +7,14 @@ import productRouter from '../src/modules/Product/product.router.js'
 import cartRouter from '../src/modules/Cart/cart.router.js'
 import { globalError } from "./utils/errorHandler.js"
 const bootstrab=(app,express)=>{
- app.use(express.json())
+ app.use((req,res,next)=>{
+    if(req.originalUrl=='order/webhook'){
+      return next();
+    }else{
+         express.json({})(req,res,next);
+    }
+   
+ })
  app.use('/category',categoryRouter)
  app.use('/subCategory',subCategoryRouter)
  app.use('/auth',authRouter)

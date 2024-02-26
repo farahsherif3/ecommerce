@@ -13,5 +13,5 @@ post('/signUp',validation(authValidation.signUPSchema),authController.signUP)
 .patch('./updatePassword',validation(authValidation.updatepasswordSchema),authController.updatePassword)
 .get('./forgetpassword',validation(authValidation.forgotPasswordSchema),authController.forgetPassword)
 .put('./resetPassword',validation(authValidation.resetPasswordSchema),authController.resetPassword)
-
+.post('/logInWithGmail',authController.logInWithGmail)
 export default router

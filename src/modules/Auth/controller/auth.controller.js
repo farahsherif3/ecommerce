@@ -6,6 +6,8 @@ import { asyncHandler } from "../../../utils/errorHandler.js";
 import { Hash } from "../../../utils/Hash_Compare.js";
 import { config } from "dotenv";
 import { Error } from "mongoose";
+import {OAuth2Client} from'google-auth-library';
+import { nanoid } from "nanoid";
 config()
 
 export const signUP=asyncHandler(
@@ -196,4 +198,74 @@ export const resetPassword = asyncHandler(
        
         
       })
+
+export const logInWithGmail=asyncHandler(
+    async(req,res,next)=>{
+     
+const client = new OAuth2Client();
+async function verify() {
+    const {idToken}=req.body
+  const ticket = await client.verifyIdToken({
+     
+      idToken ,
+      audience: process.env.CLIENT_ID, 
+  });
+  const payload = ticket.getPayload();
+  return payload;
+}
+
+const {email,name,picture,email_verified}=await verify()
+const user=await UserModel.findOne({email})
+//signUp
+if(!user){
+const newUser=await UserModel.create({
+    userName:name,
+    email,
+    confirmEmail:email_verified,
+    password:nanoid(6),
+    image:{
+        secure_url:picture
+    },
+    status:"Online",
+    provider:"Google"
     
+})
+const token=GenerateToken=({
+    payload:{email,id:newUser._id,role:newUser.role},
+    signature:process.env.TOKEN_SEGNATURE,
+    expires:60*30
+}
+)
+
+const ref_Token=GenerateToken=({
+    payload:{email,id:newUser._id,role:newUser.role},
+    signature:process.env.TOKEN_SEGNATURE,
+    expires:60*60*24*30
+})
+return res .status(201).json({message:'done',ref_Token,token})
+}
+
+
+if(user.provider=="Google"){
+user.status="Online"
+await user.save()
+
+const token=GenerateToken=({
+    payload:{email,id:emailExist._id,role:emailExist.role},
+    signature:process.env.TOKEN_SEGNATURE,
+    expires:60*30
+}
+)
+
+
+const ref_Token=GenerateToken=({
+    payload:{email,id:emailExist._id,role:emailExist.role},
+    signature:process.env.TOKEN_SEGNATURE,
+    expires:60*60*24*30
+})
+return res .status(200).json({message:'done',ref_Token,token})
+}
+return next( new Error("invalid provider system login with gmail"));
+return res.json({message:'done'})
+    }
+)

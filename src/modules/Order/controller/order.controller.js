@@ -7,6 +7,7 @@ import createInvoice from '../../../utils/createInvoice.js'
 import sendEmail from "../../../utils/email.js";
 import { asyncHandler } from "../../../utils/errorHandler.js";
 import payment from "../../../utils/payment.js";
+import UserModel from "../../../../DB/models/User.model.js";
 
 
 export const createOrder=asyncHandler(
@@ -177,5 +178,63 @@ export const deliverOrder=asyncHandler(
 
     }
 )
-
 /// rejected end point
+export const rejectedOrder=asyncHandler(
+    async(req,res,next)=>{
+        const{orderId}=req.params
+        const{_id}=req.user
+        if(!await UserModel.findOne({_id,role:'Admin'})){
+            return next(new Error("only admin can reject order"))
+        }
+        const order=await OrderModel.findOne({_id:orderId})
+        if(!order){
+            return next(new Error('invalid orderId',{cause:404}))
+        }
+        if(order.status!='placed'|| order.status!='waitForPayment'){
+            return next(new Error('inavalid canceld order',{cause:400}))
+        }
+        for (const product of order.products) {
+            await productModel.updateOne({_id:product.productId},{ $inc :{ stock:parseInt(product.quantity)}} )
+
+        }
+        
+        if(order.couponId){
+            await CouponModel.updateOne({_id:coupon._id},{ $pull: { usedBy:  req.user._id }})
+        }
+        
+        const updatedOrder=await OrderModel.updateOne({_id:orderId},{status:'canceled',updatedBy:req.user._id})
+ return res.status(200).json({message:'done',updatedOrder})
+
+    }
+)
+
+export const webHook=asyncHandler(
+async(req,res,next)=>{
+   const stripe=new Stripe(process.env.SECRETE_KEY)
+    const endpointSecret = process.env.END_POINT_SECRETE;
+
+  const sig = req.headers['stripe-signature'];
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+  } catch (err) {
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  
+  }
+
+  // Handle the event
+  if(event.type=='checkout.session.completed'){
+  let orderId=event.data.object.metadata.orderId
+  const updateOrder=await OrderModel.updateOne(
+    {_id:orderId},
+    {status:'placed'}
+  )
+  return res.status(200).json({message:'done'})
+  }
+
+return next(new Error('failed to pay',{cause:500}))
+}
+)
+
